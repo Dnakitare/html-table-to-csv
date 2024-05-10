@@ -18,6 +18,11 @@ def parse_html_to_csv(input_file, output_file):
     for tr in table_rows:
         cells = tr.find_all('td')
         row_data = [cell.text.strip() for cell in cells]
+
+        # Skip the row if it is empty
+        if all(cell == '' for cell in row_data):
+            continue
+        
         if row_data:
             data.append(row_data)
 
