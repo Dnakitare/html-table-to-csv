@@ -18,7 +18,7 @@ def parse_html_to_csv(input_file, output_file):
     for table in tables:
         table_rows = table.find_all('tr')
         for tr in table_rows:
-            cells = tr.find_all('td')
+            cells = tr.find_all(['td', 'th'])
             row_data = [cell.get_text(strip=True) for cell in cells]
 
             # Skip the row if it is empty
@@ -30,20 +30,26 @@ def parse_html_to_csv(input_file, output_file):
 
     # Create DataFrame
     df = pd.DataFrame(data)
+    # print(df)
 
-    # Cleaning and restructuring the DataFrame
+    # Extract relevant data based on HTML structure
     cleaned_data = []
+    lumber_size = None
+
     for index, row in df.iterrows():
-        if len(row) > 1 and row[1]:  # Check if the second column exists and has data
-            lumber_size = row[1]
-            if index + 1 < len(df):
-                follow_row = df.iloc[index + 1]  # The row right after the lumber size contains the data
-                
-                # Extract specific columns, assuming the structure of follow_row is consistent
-                quantity = follow_row[2] if len(follow_row) > 2 else None
-                board_footage = follow_row[6] if len(follow_row) > 6 else None
-                lineal_footage = follow_row[7] if len(follow_row) > 7 else None
-                
+        if len(row) > 1 and 'SKU' in row[1]:
+            if index > 0:  # Previous row is lumber size
+                lumber_size_row = df.iloc[index - 1]
+                lumber_size = lumber_size_row[1]  # Concatenate all items in the lumber size row
+            if lumber_size and len(row) >= 8:
+                data_row = df.iloc[index + 1]
+                quantity = data_row[2]
+                if data_row[6] == '':
+                    board_footage = data_row[7]
+                    lineal_footage = data_row[8]
+                else:
+                    board_footage = data_row[6]
+                    lineal_footage = data_row[7]
                 cleaned_data.append([lumber_size, quantity, board_footage, lineal_footage])
 
     # Create a new DataFrame from the cleaned data
