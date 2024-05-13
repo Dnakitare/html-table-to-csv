@@ -26,13 +26,12 @@ def parse_html_to_csv(input_file, output_file):
             # Skip the row if it is empty
             if all(cell == '' for cell in row_data):
                 continue
-            
+
             if row_data:
                 data.append(row_data)
 
     # Create DataFrame
     df = pd.DataFrame(data)
-    # print(df)
 
     # Extract relevant data based on HTML structure
     cleaned_data = []
@@ -49,7 +48,7 @@ def parse_html_to_csv(input_file, output_file):
             else:
                 if index > 0:  # Previous row is lumber size
                     lumber_size_row = df.iloc[index - 1]
-                    lumber_size = lumber_size_row[1]  # Concatenate all items in the lumber size row
+                    lumber_size = ' '.join(lumber_size_row.dropna())  # Concatenate all items in the lumber size row
                 if lumber_size and len(row) >= 8:
                     data_row = df.iloc[index + 1]
                     quantity = data_row[2]
@@ -59,15 +58,71 @@ def parse_html_to_csv(input_file, output_file):
                     else:
                         board_footage = data_row[6]
                         lineal_footage = data_row[7]
+            # trim any leading or trailing whitespace
+            lumber_size = lumber_size.strip() if lumber_size else None
+            quantity = int(quantity.strip()) if quantity else None
+            board_footage = float(board_footage.strip()) if board_footage else None
+            lineal_footage = lineal_footage.strip() if lineal_footage else None
             cleaned_data.append([lumber_size, quantity, board_footage, lineal_footage])
 
     # Create a new DataFrame from the cleaned data
-    clean_df = pd.DataFrame(cleaned_data, columns=['Lumber Size', 'Quantity', 'Board Footage', 'Lineal Footage'])
+    df = pd.DataFrame(cleaned_data, columns=['Lumber Size', 'Quantity', 'Board Footage', 'Lineal Footage'])
 
-    print(clean_df)
+    # Function to convert feet and inches to inches
+    def to_inches(lineal_footage):
+        # If the measurement is None or empty, treat it as 0 feet 0 inches
+        if not lineal_footage:
+            return 0
+        
+        # Split the string into feet and inches parts
+        parts = lineal_footage.split("'")
+        feet = int(parts[0].strip())
+        inches_part = parts[1].strip().replace('"', '')
+
+        # Handle inches and optional fractional inches
+        if '-' in inches_part:
+            inches, fraction = inches_part.split('-')
+            inches = int(inches)
+            fractional_inches = float(Fraction(fraction))
+        else:
+            inches = int(inches_part)
+            fractional_inches = 0
+
+        total_inches = feet * 12 + inches + fractional_inches
+        return total_inches
+
+    # Function to convert inches back to feet and inches
+    def to_feet_and_inches(total_inches):
+        feet = total_inches // 12
+        inches = total_inches % 12
+        return f"{int(feet)}' {inches}\""
+
+    # Convert Lineal Footage to inches for aggregation
+    df['Lineal Footage (inches)'] = df['Lineal Footage'].apply(lambda x: to_inches(x) if pd.notnull(x) else 0)
+
+    # Convert Board Footage to float
+    df['Board Footage'] = pd.to_numeric(df['Board Footage'], errors='coerce')
+
+    # Aggregate data by Lumber Size
+    aggregated_data = df.groupby('Lumber Size').agg({
+        'Quantity': 'sum',
+        'Board Footage': lambda x: round(x.sum(), 2) if x.dtype == 'float64' else None,
+        'Lineal Footage (inches)': lambda x: x.sum() if x.dtype == 'float64' else None
+    }).reset_index()
+
+    # Convert aggregated Lineal Footage back to feet and inches
+    aggregated_data['Lineal Footage'] = aggregated_data['Lineal Footage (inches)'].apply(to_feet_and_inches)
+
+    # if board footage is 0 or NaN, set it to None
+    aggregated_data['Board Footage'] = aggregated_data['Board Footage'].apply(lambda x: None if x == 0 else x)
+    # if lineal footage is 0, set it to None
+    aggregated_data['Lineal Footage'] = aggregated_data['Lineal Footage'].apply(lambda x: None if x == "0' 0.0\"" else x)
+
+    # Drop the intermediate column
+    aggregated_data = aggregated_data.drop(columns=['Lineal Footage (inches)'])
 
     # Save to CSV
-    clean_df.to_csv(output_file, index=False)
+    aggregated_data.to_csv(output_file, index=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert HTML table to CSV.')
