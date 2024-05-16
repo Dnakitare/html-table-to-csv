@@ -31,7 +31,7 @@ If you prefer to build the executable from the source code, follow these steps:
 1. Clone the repository:
 
     ```sh
-    git clone https://github.com/yourusername/html-to-csv.git
+    git clone https://github.com/dnakitare/html-to-csv.git
     cd html-to-csv
     ```
 
@@ -106,3 +106,28 @@ Given an HTML file `sample.html`:
 </body>
 </html>
 ```
+
+Running the command:
+```sh
+html_to_csv.exe sample.html
+```
+Will generate a CSV file sampel.csv with the following content:
+```csv
+Lumber Size,Quantity,Board Footage,Lineal Footage
+Wood Plank,10,,10' 0"
+Plywood,5,,5' 0"
+```
+
+### License
+Distributed under the Apache-2.0 license. See [LICENSE](https://www.apache.org/licenses/LICENSE-2.0) for more information.
+
+### Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Issues
+If you encounter any issues, please open an issue on GitHub.
+
+### Acknowledgements
+This project uses the following libraries:
+- [BeatifulSoup](https://www.crummy.com/software/BeautifulSoup/)
+- [pandas](https://pandas.pydata.org)
