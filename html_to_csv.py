@@ -3,8 +3,16 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 from fractions import Fraction
+import os
 
-def parse_html_to_csv(input_file, output_file):
+def parse_html_to_csv(input_file):
+    # Check that the input file is an HTML file
+    if not input_file.endswith('.html'):
+        raise ValueError("Input file must be an HTML file")
+
+    # Generate the output file path
+    output_file = os.path.splitext(input_file)[0] + '.csv'
+
     # Load HTML content
     with open(input_file, 'r', encoding='utf-8') as file:
         html_content = file.read()
@@ -127,7 +135,6 @@ def parse_html_to_csv(input_file, output_file):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert HTML table to CSV.')
     parser.add_argument('input_file', type=str, help='The HTML file to parse.')
-    parser.add_argument('output_file', type=str, help='The CSV file to output.')
     args = parser.parse_args()
 
-    parse_html_to_csv(args.input_file, args.output_file)
+    parse_html_to_csv(args.input_file)
